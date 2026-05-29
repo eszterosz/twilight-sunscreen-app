@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="SPF Reminder" />
+  <title>SPF Reminder</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Rounded', 'Segoe UI', sans-serif;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(160deg, #1a1a2e 0%, #16213e 40%, #0f3460 100%);
+      padding: 2rem 1.5rem;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Misty forest blobs */
+    body::before {
+      content: '';
+      position: absolute;
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(80,40,120,0.4) 0%, transparent 70%);
+      top: -100px; right: -100px;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    body::after {
+      content: '';
+      position: absolute;
+      width: 320px; height: 320px;
+      background: radial-gradient(circle, rgba(20,80,60,0.35) 0%, transparent 70%);
+      bottom: -80px; left: -80px;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .card {
+      background: rgba(15, 10, 30, 0.75);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 32px;
+      border: 1px solid rgba(140,100,220,0.15);
+      padding: 2.5rem 2rem 2rem;
+      width: 100%;
+      max-width: 360px;
+      box-shadow: 0 8px 40px rgba(60,20,100,0.4), 0 1px 0 rgba(180,140,255,0.1) inset;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .sun {
+      font-size: 5rem;
+      line-height: 1;
+      filter: drop-shadow(0 4px 18px rgba(180,140,255,0.5));
+      animation: pulse 3s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.07); }
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #e8ddd0;
+      letter-spacing: -0.5px;
+      text-align: center;
+    }
+
+    .subtitle {
+      font-size: 0.9rem;
+      color: rgba(200,180,255,0.7);
+      text-align: center;
+      line-height: 1.4;
+      margin-top: -0.75rem;
+    }
+
+    /* Ring timer */
+    .ring-wrap {
+      position: relative;
+      width: 160px;
+      height: 160px;
+    }
+
+    .ring-wrap svg {
+      transform: rotate(-90deg);
+      width: 100%; height: 100%;
+    }
+
+    .ring-bg {
+      fill: none;
+      stroke: rgba(140,100,220,0.2);
+      stroke-width: 10;
+    }
+
+    .ring-progress {
+      fill: none;
+      stroke: url(#ringGrad);
+      stroke-width: 10;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 1s linear;
+    }
+
+    .ring-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #timeDisplay {
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: #e8ddd0;
+      letter-spacing: -1px;
+      line-height: 1;
+    }
+
+    .ring-label {
+      font-size: 0.7rem;
+      color: rgba(200,180,255,0.6);
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    /* Buttons */
+    .btn-primary {
+      width: 100%;
+      padding: 1rem;
+      border-radius: 18px;
+      border: none;
+      background: linear-gradient(135deg, #7b3fe4, #4a1a8c);
+      color: white;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(120,60,220,0.4);
+      transition: transform 0.15s, box-shadow 0.15s;
+      letter-spacing: -0.3px;
+    }
+
+    .btn-primary:active { transform: scale(0.97); box-shadow: 0 2px 10px rgba(120,60,220,0.2); }
+
+    .btn-secondary {
+      width: 100%;
+      padding: 0.85rem;
+      border-radius: 16px;
+      border: 1px solid rgba(140,100,220,0.3);
+      background: rgba(255,255,255,0.05);
+      color: #e8ddd0;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s, background 0.15s;
+    }
+
+    .btn-secondary:active { transform: scale(0.97); background: rgba(140,100,220,0.15); }
+
+    .btn-row { display: flex; gap: 0.75rem; width: 100%; }
+    .btn-row .btn-secondary { flex: 1; }
+
+    /* Status pill */
+    .status {
+      font-size: 0.85rem;
+      padding: 0.4rem 1rem;
+      border-radius: 999px;
+      font-weight: 600;
+      background: rgba(140,100,220,0.15);
+      color: rgba(200,180,255,0.8);
+    }
+
+    .status.active { background: rgba(60,180,120,0.2); color: #7ee8b8; }
+    .status.warning { background: rgba(220,60,60,0.2); color: #f4a0a0; }
+
+    /* Notification banner */
+    #banner {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      background: linear-gradient(135deg, #7b3fe4, #4a1a8c);
+      color: white;
+      text-align: center;
+      padding: 1.2rem 1.5rem env(safe-area-inset-top);
+      font-size: 1rem;
+      font-weight: 600;
+      z-index: 100;
+      animation: slideDown 0.4s ease;
+    }
+
+    @keyframes slideDown {
+      from { transform: translateY(-100%); }
+      to { transform: translateY(0); }
+    }
+
+    /* History */
+    .history {
+      width: 100%;
+    }
+
+    .history-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: rgba(200,180,255,0.6);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.5rem;
+    }
+
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .history-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: rgba(220,210,255,0.7);
+    }
+
+    .history-item span { font-size: 1rem; }
+
+    /* ── Edward Modal ── */
+    #edwardOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 5, 20, 0.85);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      animation: fadeIn 0.3s ease;
+    }
+    #edwardOverlay.show { display: flex; }
+
+    @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+
+    .edward-card {
+      background: linear-gradient(160deg, #1a0a2e 0%, #0d0d1a 100%);
+      border: 1px solid rgba(180, 160, 255, 0.2);
+      border-radius: 28px;
+      padding: 2rem 1.75rem 1.75rem;
+      max-width: 340px;
+      width: 100%;
+      box-shadow: 0 0 60px rgba(120, 80, 255, 0.25), 0 0 120px rgba(80,40,180,0.15);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.2rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Sparkle shimmer bg */
+    .edward-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 18px,
+        rgba(200,180,255,0.03) 18px,
+        rgba(200,180,255,0.03) 19px
+      );
+      pointer-events: none;
+    }
+
+    /* ── CSS Edward face ── */
+    .edward-face {
+      position: relative;
+      width: 110px;
+      height: 130px;
+      margin-top: 0.5rem;
+    }
+
+    /* Head */
+    .edward-head {
+      position: absolute;
+      bottom: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 80px; height: 95px;
+      background: #e8ddd0;
+      border-radius: 50% 50% 46% 46% / 55% 55% 45% 45%;
+      box-shadow: inset -6px -4px 12px rgba(0,0,0,0.12), 0 0 20px rgba(200,180,255,0.15);
+    }
+
+    /* Hair */
+    .edward-hair {
+      position: absolute;
+      top: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 84px; height: 54px;
+      background: #3d2b1f;
+      border-radius: 50% 50% 0 0 / 70% 70% 0 0;
+      z-index: 2;
+    }
+    .edward-hair::after {
+      content: '';
+      position: absolute;
+      bottom: -8px; left: -4px;
+      width: 40px; height: 22px;
+      background: #3d2b1f;
+      border-radius: 0 0 60% 40%;
+      transform: rotate(-8deg);
+    }
+
+    /* Eyes */
+    .edward-eyes {
+      position: absolute;
+      top: 62px; left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      display: flex;
+      justify-content: space-between;
+      z-index: 6;
+    }
+    .eye {
+      width: 14px; height: 10px;
+      background: #1a0a00;
+      border-radius: 50%;
+      position: relative;
+      box-shadow: 0 0 4px rgba(120,80,255,0.6);
+    }
+    .eye::after {
+      content: '';
+      position: absolute;
+      top: 2px; right: 2px;
+      width: 3px; height: 3px;
+      background: white;
+      border-radius: 50%;
+    }
+    /* brooding brow */
+    .eye::before {
+      content: '';
+      position: absolute;
+      top: -5px; left: -1px;
+      width: 16px; height: 4px;
+      background: #3d2b1f;
+      border-radius: 2px;
+      transform: rotate(-8deg);
+    }
+
+    /* Nose */
+    .edward-nose {
+      position: absolute;
+      z-index: 6;
+      top: 78px; left: 50%;
+      transform: translateX(-50%);
+      width: 6px; height: 8px;
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-bottom: 5px solid rgba(0,0,0,0.12);
+      z-index: 3;
+    }
+
+    /* Mouth with fangs */
+    .edward-mouth {
+      position: absolute;
+      z-index: 6;
+      top: 91px; left: 50%;
+      transform: translateX(-50%);
+      width: 30px; height: 10px;
+      z-index: 3;
+    }
+    .edward-mouth::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 26px; height: 6px;
+      border-bottom: 2px solid rgba(0,0,0,0.25);
+      border-radius: 0 0 50% 50%;
+    }
+    /* Fangs */
+    .fang {
+      position: absolute;
+      top: 3px;
+      width: 5px; height: 8px;
+      background: white;
+      border-radius: 0 0 3px 3px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .fang.left  { left: 5px; }
+    .fang.right { right: 5px; }
+
+    /* Sparkle dots */
+    .sparkles {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 4;
+    }
+    .sparkle {
+      position: absolute;
+      width: 2px; height: 2px;
+      background: white;
+      border-radius: 50%;
+      box-shadow: 0 0 3px 1px rgba(200,180,255,0.9);
+      animation: twinkle 1.4s ease-in-out infinite;
+    }
+    .sparkle:nth-child(1)  { top: 20%; left: 5%;   animation-delay: 0s;    }
+    .sparkle:nth-child(2)  { top: 35%; right: 3%;  animation-delay: 0.3s;  }
+    .sparkle:nth-child(3)  { top: 10%; right: 18%; animation-delay: 0.6s;  }
+    .sparkle:nth-child(4)  { top: 55%; left: 2%;   animation-delay: 0.9s;  }
+    .sparkle:nth-child(5)  { top: 15%; left: 30%;  animation-delay: 1.1s;  }
+    .sparkle:nth-child(6)  { top: 70%; right: 8%;  animation-delay: 0.2s;  }
+    .sparkle:nth-child(7)  { top: 5%;  left: 15%;  animation-delay: 0.75s; }
+    .sparkle:nth-child(8)  { top: 45%; right: 12%; animation-delay: 1.3s;  }
+    .sparkle:nth-child(9)  { top: 80%; left: 20%;  animation-delay: 0.5s;  }
+    .sparkle:nth-child(10) { top: 25%; right: 28%; animation-delay: 1.0s;  }
+    .sparkle:nth-child(11) { top: 60%; left: 40%;  animation-delay: 0.4s;  }
+    .sparkle:nth-child(12) { top: 8%;  right: 35%; animation-delay: 1.5s;  }
+    .sparkle:nth-child(13) { top: 50%; right: 40%; animation-delay: 0.85s; }
+    .sparkle:nth-child(14) { top: 75%; right: 25%; animation-delay: 1.2s;  }
+    .sparkle:nth-child(15) { top: 30%; left: 45%;  animation-delay: 0.15s; }
+
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.2; transform: scale(0.7); }
+      50%       { opacity: 1;   transform: scale(1.3); }
+    }
+
+    .edward-name {
+      font-size: 0.72rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: rgba(200,180,255,0.6);
+      font-weight: 600;
+    }
+
+    .edward-quote {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #e8ddd0;
+      text-align: center;
+      line-height: 1.5;
+      font-style: italic;
+      text-shadow: 0 0 20px rgba(180,140,255,0.4);
+    }
+
+    .edward-quote em {
+      color: #c8a8ff;
+      font-style: normal;
+    }
+
+    .edward-dismiss {
+      width: 100%;
+      padding: 0.9rem;
+      border-radius: 16px;
+      border: none;
+      background: linear-gradient(135deg, #7b3fe4, #4a1a8c);
+      color: white;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(120,60,220,0.4);
+      transition: transform 0.15s;
+      letter-spacing: -0.2px;
+    }
+    .edward-dismiss:active { transform: scale(0.97); }
+
+    .edward-snooze {
+      width: 100%;
+      padding: 0.7rem;
+      border-radius: 14px;
+      border: 1px solid rgba(180,160,255,0.2);
+      background: transparent;
+      color: #e8ddd0;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+      font-style: italic;
+      letter-spacing: 0.5px;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Rounded', 'Segoe UI', sans-serif;
+      opacity: 0.7;
+    }
+    .edward-snooze:hover { opacity: 1; border-color: rgba(180,160,255,0.4); }
+    .edward-snooze:active { transform: scale(0.97); }
+
+    /* ── Burned Edward state ── */
+    .edward-card.burned {
+      box-shadow: 0 0 60px rgba(255,80,0,0.35), 0 0 120px rgba(200,50,0,0.2);
+      border-color: rgba(255,120,60,0.3);
+    }
+    .edward-card.burned .edward-name {
+      color: rgba(255,160,80,0.8);
+    }
+
+    /* Burn marks on the face */
+    .burn-mark {
+      position: absolute;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(180,60,0,0.55) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 7;
+    }
+    .burn-mark.b1 { width: 22px; height: 16px; top: 58px; left: 24px; transform: rotate(-15deg); }
+    .burn-mark.b2 { width: 16px; height: 14px; top: 72px; right: 20px; transform: rotate(10deg); }
+    .burn-mark.b3 { width: 12px; height: 10px; top: 88px; left: 38px; }
+
+    /* Smoke wisps */
+    .smoke {
+      position: absolute;
+      width: 4px;
+      border-radius: 50%;
+      background: rgba(255,140,60,0.5);
+      bottom: 110px;
+      animation: smokeRise 2s ease-out infinite;
+      z-index: 8;
+    }
+    .smoke.s1 { left: 34px;  height: 12px; animation-delay: 0s;    width: 3px; }
+    .smoke.s2 { left: 55px;  height: 16px; animation-delay: 0.5s;  width: 4px; }
+    .smoke.s3 { right: 28px; height: 10px; animation-delay: 0.9s;  width: 3px; }
+
+    @keyframes smokeRise {
+      0%   { opacity: 0.7; transform: translateY(0)   scaleX(1); }
+      100% { opacity: 0;   transform: translateY(-20px) scaleX(2.5); }
+    }
+
+    /* Angrier brows when burned */
+    .burned-brow-left, .burned-brow-right {
+      position: absolute;
+      width: 18px; height: 4px;
+      background: #2a1a0a;
+      border-radius: 2px;
+      z-index: 7;
+    }
+    .burned-brow-left  { top: 57px; left: 22px;  transform: rotate(-18deg); }
+    .burned-brow-right { top: 57px; right: 18px; transform: rotate(18deg);  }
+
+    /* install tip */
+    /* UV Index widget */
+    .uv-widget {
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(140,100,220,0.2);
+      border-radius: 18px;
+      padding: 0.9rem 1.1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+    }
+
+    .uv-icon { font-size: 1.4rem; line-height: 1; flex-shrink: 0; }
+
+    .uv-info { flex: 1; }
+
+    .uv-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: rgba(200,180,255,0.5);
+      margin-bottom: 2px;
+    }
+
+    .uv-value {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #e8ddd0;
+    }
+
+    .uv-value span {
+      font-size: 0.8rem;
+      font-weight: 500;
+      margin-left: 0.3rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+    }
+
+    .uv-low    { background: rgba(60,200,100,0.2);  color: #7ee8a8; }
+    .uv-mod    { background: rgba(230,200,50,0.2);  color: #f0d060; }
+    .uv-high   { background: rgba(230,130,30,0.2);  color: #f0a050; }
+    .uv-vhigh  { background: rgba(220,60,60,0.2);   color: #f47070; }
+    .uv-ext    { background: rgba(160,40,220,0.2);  color: #c090f8; }
+
+    .uv-bar-wrap {
+      width: 100%;
+      height: 4px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 999px;
+      margin-top: 6px;
+      overflow: hidden;
+    }
+    .uv-bar {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.6s ease;
+    }
+
+    .install-tip {
+      font-size: 0.78rem;
+      color: rgba(200,180,255,0.5);
+      text-align: center;
+      line-height: 1.5;
+      opacity: 0.8;
+    }
+
+    .install-tip strong { color: rgba(200,180,255,0.85); }
+  </style>
+</head>
+<body>
+
+<div id="banner">☀️ Time to reapply your sunscreen!</div>
+
+<!-- Edward Cullen Modal -->
+<div id="edwardOverlay">
+  <div class="edward-card">
+    <div class="edward-face">
+      <div class="sparkles">
+        <div class="sparkle"></div>
+        <div class="sparkle"></div>
+        <div class="sparkle"></div>
+        <div class="sparkle"></div>
+        <div class="sparkle"></div>
+        <div class="sparkle"></div>
+        <div class="sparkle"></div>
+        <div class="sparkle"></div>
+        <div class="sparkle"></div>
+        <div class="sparkle"></div>
+        <div class="sparkle"></div>
+        <div class="sparkle"></div>
+        <div class="sparkle"></div>
+        <div class="sparkle"></div>
+        <div class="sparkle"></div>
+      </div>
+      <div class="edward-hair"></div>
+      <div class="edward-head"></div>
+      <div class="edward-eyes">
+        <div class="eye"></div>
+        <div class="eye"></div>
+      </div>
+      <div class="edward-nose"></div>
+      <div class="edward-mouth">
+        <div class="fang left"></div>
+        <div class="fang right"></div>
+      </div>
+      <!-- Burned state elements (hidden by default) -->
+      <div class="burn-mark b1" id="burn1" style="display:none"></div>
+      <div class="burn-mark b2" id="burn2" style="display:none"></div>
+      <div class="burn-mark b3" id="burn3" style="display:none"></div>
+      <div class="smoke s1" id="smoke1" style="display:none"></div>
+      <div class="smoke s2" id="smoke2" style="display:none"></div>
+      <div class="smoke s3" id="smoke3" style="display:none"></div>
+      <div class="burned-brow-left"  id="browL" style="display:none"></div>
+      <div class="burned-brow-right" id="browR" style="display:none"></div>
+    </div>
+
+    <div class="edward-name">✦ Edward Cullen ✦</div>
+
+    <p class="edward-quote" id="edwardQuote">
+      "You need to maintain<br>the skin of a killer,<br><em>Bella.</em>"
+    </p>
+
+    <button class="edward-dismiss" onclick="dismissEdward()">
+      🧴 Reapply Now
+    </button>
+    <button class="edward-snooze" id="snoozeBtn" onclick="snoozeEdward()">
+      Not now, Edward...
+    </button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="sun">🌘</div>
+  <h1>The Sun is On</h1>
+  <p class="subtitle">Even vampires know UV is forever —<br>reapply every 2 hours, Bella.</p>
+
+  <!-- Ring timer -->
+  <div class="ring-wrap">
+    <svg viewBox="0 0 160 160">
+      <defs>
+        <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#a06eee"/>
+          <stop offset="100%" stop-color="#4a1a8c"/>
+        </linearGradient>
+      </defs>
+      <circle class="ring-bg" cx="80" cy="80" r="70"/>
+      <circle class="ring-progress" id="ringProgress" cx="80" cy="80" r="70"
+        stroke-dasharray="439.8"
+        stroke-dashoffset="0"/>
+    </svg>
+    <div class="ring-center">
+      <div id="timeDisplay">2:00</div>
+      <div class="ring-label" id="ringLabel">ready</div>
+    </div>
+  </div>
+
+  <div id="statusPill" class="status">Not started</div>
+
+  <!-- Buttons -->
+  <button class="btn-primary" id="mainBtn" onclick="handleMain()">Start Protection</button>
+
+  <div class="btn-row" id="secondaryRow" style="display:none">
+    <button class="btn-secondary" onclick="reappliedNow()">✅ Reapplied!</button>
+    <button class="btn-secondary" onclick="stopTimer()">Stop</button>
+  </div>
+
+  <!-- History -->
+  <div class="history" id="historySection" style="display:none">
+    <div class="history-title">Today's applications</div>
+    <div class="history-list" id="historyList"></div>
+  </div>
+
+  <!-- UV Index Widget -->
+  <div class="uv-widget" id="uvWidget">
+    <div class="uv-icon" id="uvIcon">🌍</div>
+    <div class="uv-info">
+      <div class="uv-label">UV Index · Now</div>
+      <div class="uv-value" id="uvValue">Fetching location...</div>
+      <div class="uv-bar-wrap" id="uvBarWrap" style="display:none">
+        <div class="uv-bar" id="uvBar"></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="install-tip">
+    📲 <strong>Add to Home Screen</strong> for the best experience:<br>
+    tap <strong>Share → Add to Home Screen</strong> in Safari
+  </p>
+</div>
+
+<script>
+  let INTERVAL = 2 * 60 * 60; // default 2 hours, adjusted by UV
+  let totalSeconds = INTERVAL;
+  let remaining = INTERVAL;
+  let timerInterval = null;
+  let running = false;
+  let applications = [];
+  let isSnoozed = false;
+  let snoozeCount = 0;
+  let buzzInterval = null;
+
+  const circumference = 2 * Math.PI * 70; // 439.8
+
+  function formatTime(s) {
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2,'0')}`;
+    return `${m}:${String(sec).padStart(2,'0')}`;
+  }
+
+  function updateRing() {
+    const frac = remaining / totalSeconds;
+    const offset = circumference * (1 - frac);
+    document.getElementById('ringProgress').style.strokeDashoffset = offset;
+    document.getElementById('timeDisplay').textContent = formatTime(remaining);
+  }
+
+  function handleMain() {
+    if (!running) {
+      requestNotificationPermission();
+      startTimer();
+    }
+  }
+
+  function startTimer() {
+    running = true;
+    remaining = INTERVAL;
+    totalSeconds = INTERVAL;
+    updateRing();
+    document.getElementById('mainBtn').style.display = 'none';
+    document.getElementById('secondaryRow').style.display = 'flex';
+    document.getElementById('statusPill').textContent = 'Protection active ☀️';
+    document.getElementById('statusPill').className = 'status active';
+    document.getElementById('ringLabel').textContent = 'remaining';
+
+    logApplication();
+
+    timerInterval = setInterval(() => {
+      remaining--;
+      updateRing();
+      if (remaining <= 0) {
+        triggerReminder();
+      }
+    }, 1000);
+  }
+
+  function triggerReminder() {
+    clearInterval(timerInterval);
+    running = false;
+    document.getElementById('statusPill').textContent = '⚠️ Reapply now!';
+    document.getElementById('statusPill').className = 'status warning';
+    document.getElementById('ringLabel').textContent = 'reapply!';
+
+    // Show Edward with the right quote + appearance based on snooze count
+    const card = document.querySelector('.edward-card');
+    const burnEls = ['burn1','burn2','burn3','smoke1','smoke2','smoke3','browL','browR'];
+
+    if (snoozeCount >= 2) {
+      // Burned & furious — no snooze option
+      document.getElementById('edwardQuote').innerHTML = '"I\'m fading away, <em>loca...</em>"';
+      card.classList.add('burned');
+      burnEls.forEach(id => document.getElementById(id).style.display = 'block');
+      document.getElementById('snoozeBtn').style.display = 'none';
+    } else if (snoozeCount === 1) {
+      // Serious
+      document.getElementById('edwardQuote').innerHTML = '"Bella, I\'m serious.<br>Do it now."';
+      card.classList.remove('burned');
+      burnEls.forEach(id => document.getElementById(id).style.display = 'none');
+      document.getElementById('snoozeBtn').style.display = 'block';
+    } else {
+      // Normal
+      document.getElementById('edwardQuote').innerHTML = '"You need to maintain<br>the skin of a killer,<br><em>Bella.</em>"';
+      card.classList.remove('burned');
+      burnEls.forEach(id => document.getElementById(id).style.display = 'none');
+      document.getElementById('snoozeBtn').style.display = 'block';
+    }
+    document.getElementById('edwardOverlay').classList.add('show');
+
+    // Browser / PWA notification
+    if (Notification.permission === 'granted') {
+      new Notification('🧛 Edward says: reapply your SPF!', {
+        body: '"You need to maintain the skin of a killer, Bella."',
+        icon: 'https://cdn.jsdelivr.net/npm/twemoji@14.0.2/assets/72x72/2600.png',
+      });
+    }
+
+    // Continuous buzz until dismissed
+    if (navigator.vibrate) {
+      navigator.vibrate([400, 200]);
+      buzzInterval = setInterval(() => {
+        navigator.vibrate([400, 200]);
+      }, 600);
+    }
+  }
+
+  function stopBuzz() {
+    if (buzzInterval) {
+      clearInterval(buzzInterval);
+      buzzInterval = null;
+    }
+    if (navigator.vibrate) navigator.vibrate(0); // cancel any active vibration
+  }
+
+  function dismissEdward() {
+    stopBuzz();
+    isSnoozed = false;
+    snoozeCount = 0;
+    document.querySelector('.edward-card').classList.remove('burned');
+    document.getElementById('edwardOverlay').classList.remove('show');
+    reappliedNow();
+  }
+
+  function snoozeEdward() {
+    stopBuzz();
+    snoozeCount++;
+    isSnoozed = true;
+    document.getElementById('edwardOverlay').classList.remove('show');
+    // 1st snooze = 10 min, 2nd+ snooze = 5 min
+    const SNOOZE = snoozeCount >= 2 ? 5 * 60 : 10 * 60;
+    running = true;
+    remaining = SNOOZE;
+    totalSeconds = SNOOZE;
+    updateRing();
+    document.getElementById('statusPill').textContent = '😤 Snoozed 10 min';
+    document.getElementById('statusPill').className = 'status';
+    document.getElementById('ringLabel').textContent = 'snoozed';
+    document.getElementById('mainBtn').style.display = 'none';
+    document.getElementById('secondaryRow').style.display = 'flex';
+
+    timerInterval = setInterval(() => {
+      remaining--;
+      updateRing();
+      if (remaining <= 0) triggerReminder();
+    }, 1000);
+  }
+
+  function reappliedNow() {
+    clearInterval(timerInterval);
+    const banner = document.getElementById('banner');
+    banner.style.display = 'none';
+    logApplication();
+    startTimerOnly();
+  }
+
+  function startTimerOnly() {
+    running = true;
+    remaining = INTERVAL;
+    totalSeconds = INTERVAL;
+    updateRing();
+    document.getElementById('statusPill').textContent = 'Protection active ☀️';
+    document.getElementById('statusPill').className = 'status active';
+    document.getElementById('ringLabel').textContent = 'remaining';
+
+    timerInterval = setInterval(() => {
+      remaining--;
+      updateRing();
+      if (remaining <= 0) triggerReminder();
+    }, 1000);
+  }
+
+  function stopTimer() {
+    clearInterval(timerInterval);
+    running = false;
+    remaining = INTERVAL;
+    totalSeconds = INTERVAL;
+    updateRing();
+    document.getElementById('mainBtn').style.display = 'block';
+    document.getElementById('secondaryRow').style.display = 'none';
+    document.getElementById('statusPill').textContent = 'Not started';
+    document.getElementById('statusPill').className = 'status';
+    document.getElementById('ringLabel').textContent = 'ready';
+  }
+
+  function logApplication() {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    applications.unshift(timeStr);
+    if (applications.length > 5) applications = applications.slice(0, 5);
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const section = document.getElementById('historySection');
+    const list = document.getElementById('historyList');
+    section.style.display = 'block';
+    list.innerHTML = applications.map((t, i) =>
+      `<div class="history-item"><span>${i === 0 ? '🌟' : '☀️'}</span> Applied at ${t}</div>`
+    ).join('');
+  }
+
+  function requestNotificationPermission() {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }
+
+  // ── UV Index ──────────────────────────────────────────
+  function uvLevel(uv) {
+    if (uv <= 2)  return { label: 'Low',       cls: 'uv-low',   color: '#7ee8a8', icon: '🟢' };
+    if (uv <= 5)  return { label: 'Moderate',  cls: 'uv-mod',   color: '#f0d060', icon: '🟡' };
+    if (uv <= 7)  return { label: 'High',      cls: 'uv-high',  color: '#f0a050', icon: '🟠' };
+    if (uv <= 10) return { label: 'Very High', cls: 'uv-vhigh', color: '#f47070', icon: '🔴' };
+    return           { label: 'Extreme',    cls: 'uv-ext',   color: '#c090f8', icon: '🟣' };
+  }
+
+  function showUVError(msg) {
+    document.getElementById('uvValue').textContent = msg;
+    document.getElementById('uvIcon').textContent = '⚠️';
+  }
+
+  function uvInterval(uv) {
+    if (uv >= 11) return { mins: 45, note: 'Extreme UV — reapply every 45 min' };
+    if (uv >= 8)  return { mins: 60, note: 'Very high UV — reapply every hour' };
+    if (uv >= 6)  return { mins: 90, note: 'High UV — reapply every 90 min' };
+    return               { mins: 120, note: null };
+  }
+
+  async function fetchUV(lat, lon) {
+    try {
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=uv_index&forecast_days=1&timezone=auto`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      // Find the current hour's UV index
+      const now = new Date();
+      const hour = now.getHours();
+      const uv = Math.round(data.hourly.uv_index[hour] * 10) / 10;
+
+      const lvl = uvLevel(uv);
+      document.getElementById('uvIcon').textContent = lvl.icon;
+      document.getElementById('uvValue').innerHTML =
+        `${uv} <span class="${lvl.cls}">${lvl.label}</span>`;
+
+      // Bar: scale UV 0–12 to 0–100%
+      const pct = Math.min(100, (uv / 12) * 100);
+      const bar = document.getElementById('uvBar');
+      bar.style.background = lvl.color;
+      bar.style.width = pct + '%';
+      document.getElementById('uvBarWrap').style.display = 'block';
+
+      // Adjust reminder interval based on UV
+      const { mins, note } = uvInterval(uv);
+      INTERVAL = mins * 60;
+      remaining = INTERVAL;
+      totalSeconds = INTERVAL;
+      updateRing();
+
+      // Show adjusted interval note on the widget
+      if (note) {
+        const label = document.querySelector('.uv-label');
+        label.textContent = '⚡ ' + note;
+        label.style.color = lvl.color;
+      }
+
+      // Update subtitle to reflect the actual interval
+      const intervalText = mins === 120 ? '2 hours' : mins === 90 ? '90 min' : mins + ' min';
+      document.querySelector('.subtitle').innerHTML =
+        `Even vampires know UV is forever —<br>reapply every <strong style="color:${lvl.color}">${intervalText}</strong>, Bella.`;
+
+    } catch (e) {
+      showUVError('Could not load UV data');
+    }
+  }
+
+  function initUV() {
+    if (!navigator.geolocation) {
+      showUVError('Location not supported');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      pos => fetchUV(pos.coords.latitude, pos.coords.longitude),
+      ()  => showUVError('Allow location for UV data')
+    );
+  }
+
+  // Init
+  updateRing();
+  initUV();
+</script>
+</body>
+</html>
